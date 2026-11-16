@@ -1,6 +1,6 @@
 # Okutala Etosha Lodge: staging
 
-Review build (v4) of the new Okutala Etosha Lodge website by Conversion Advantage. Static HTML, CSS and JS, no build step.
+Review build (v4.1, client feedback 16 Nov) of the new Okutala Etosha Lodge website by Conversion Advantage. Static HTML, CSS and JS, no build step.
 
 ## Structure
 

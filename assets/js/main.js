@@ -112,6 +112,21 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
+  /* ---------- Sticky booking bar (phones, tablets): after the hero, out of the way at the contact form ---------- */
+  var bookbar = document.getElementById('mBookbar');
+  function barTick() {
+    if (!bookbar) return;
+    var vh = window.innerHeight, y = window.scrollY, on = y > vh * 0.75;
+    var c = document.getElementById('contact');
+    if (on && c && !c.closest('[hidden]')) { var r = c.getBoundingClientRect(); if (r.top < vh * 0.6 && r.bottom > 0) on = false; }
+    if (document.getElementById('lightbox').classList.contains('is-open')) on = false;
+    bookbar.classList.toggle('is-on', on);
+    document.body.classList.toggle('bar-on', on && window.matchMedia('(max-width: 1100px)').matches);
+    bookbar.setAttribute('aria-hidden', on ? 'false' : 'true');
+    var a = bookbar.querySelector('a'); if (a) a.tabIndex = on ? 0 : -1;
+  }
+  window.addEventListener('scroll', barTick, { passive: true });
+
   /* ---------- Mobile menu ---------- */
   var btn = document.getElementById('menuBtn');
   var nav = document.getElementById('nav');
