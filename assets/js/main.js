@@ -4,7 +4,12 @@
 
   var CONFIG = {
     NIGHTSBRIDGE_URL: 'https://book.nightsbridge.com/18987?lang=en',
-    ENQUIRY_TO: 'reservations@okutala.com'
+    // Enquiries go through forms only (no email-app links). Accommodation, transfers and general: reservations. Fly-ins: front office.
+    TO_RESERVATIONS: 'reservations@okutalalodge.com',
+    TO_FLYIN: 'foh@okutala.com',
+    // Staging: forms show a confirmation but send nothing until a form service is connected (see README).
+    FORMS_LIVE: false,
+    FORM_SERVICE: 'https://formsubmit.co/ajax/'
   };
 
   // Each photo is stored once in the file; copies point at it with data-ref
@@ -139,7 +144,12 @@
     if (open) header.classList.remove('is-hidden');
   }
   btn.addEventListener('click', function () { setMenu(!document.body.classList.contains('menu-open')); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setMenu(false); closeLb(); } });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    // one layer at a time: photo first, then the panel underneath, then the menu
+    if (document.getElementById('lightbox').classList.contains('is-open')) { closeLb(); e.lbClosed = true; return; }
+    setMenu(false);
+  });
 
   // Booking links
   if (CONFIG.NIGHTSBRIDGE_URL) {
@@ -300,7 +310,7 @@
   }
   var lastIsPage = location.hash.indexOf('#/') === 0;
   window.addEventListener('hashchange', function () {
-    var isPage = location.hash.indexOf('#/') === 0;
+    var isPage = false;
     var switching = isPage || lastIsPage;
     lastIsPage = isPage;
     if (switching) curtainTo(route); else route();
@@ -445,7 +455,7 @@
   (function () {
     var jour = document.querySelector('.journey');
     if (!jour) return;
-    var banner = jour.querySelector('.j-banner'), map = jour.querySelector('.j-map');
+    var banner = jour.querySelector('.j-banner') || document.createElement('div'), map = jour.querySelector('.j-map');
     var road = document.getElementById('mRoad'), eto = document.getElementById('mEtosha'), mover = document.getElementById('mMover');
     var cards = jour.querySelectorAll('.j-card');
     var len = road.getTotalLength();
@@ -526,29 +536,30 @@
   var lb = document.getElementById('lightbox');
   var lbImg = document.getElementById('lbImg');
   var gs = Array.prototype.slice.call(document.querySelectorAll('.g'));
-  var lbI = 0;
+  var galImgs = gs.map(function (g) { return g.querySelector('img'); });
+  var lbSet = galImgs, lbI = 0;
   var lbCount = document.createElement('p'); lbCount.className = 'lb-count'; lb.appendChild(lbCount);
   ['prev', 'next'].forEach(function (k) {
     var b = document.createElement('button'); b.className = 'lb-nav lb-' + k; b.type = 'button';
     b.setAttribute('aria-label', k === 'prev' ? 'Previous photo' : 'Next photo');
-    b.innerHTML = k === 'prev' ? '&larr;' : '&rarr;';
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (k === 'prev' ? 'M19 12H5M11 6l-6 6 6 6' : 'M5 12h14M13 6l6 6-6 6') + '"/></svg>';
     b.addEventListener('click', function (e) { e.stopPropagation(); lbShow(lbI + (k === 'prev' ? -1 : 1)); });
     lb.appendChild(b);
   });
   function lbShow(i) {
-    lbI = (i + gs.length) % gs.length;
-    var src = gs[lbI].querySelector('img');
+    lbI = (i + lbSet.length) % lbSet.length;
+    var src = lbSet[lbI];
     lbImg.classList.remove('is-in');
     setTimeout(function () {
       lbImg.src = src.src; lbImg.alt = src.alt;
-      lbCount.textContent = (lbI + 1 < 10 ? '0' : '') + (lbI + 1) + ' / ' + (gs.length < 10 ? '0' : '') + gs.length;
+      lbCount.textContent = (lbI + 1 < 10 ? '0' : '') + (lbI + 1) + ' / ' + (lbSet.length < 10 ? '0' : '') + lbSet.length;
       requestAnimationFrame(function () { lbImg.classList.add('is-in'); });
     }, lb.classList.contains('is-open') ? 300 : 0);
   }
-  function openLb(i) { lb.hidden = false; requestAnimationFrame(function () { lb.classList.add('is-open'); }); lbShow(i); lockScroll(true); }
-  function closeLb() { if (!lb.classList.contains('is-open')) return; lb.classList.remove('is-open'); lbImg.classList.remove('is-in'); lockScroll(false); setTimeout(function () { lb.hidden = true; }, 800); }
+  function openLb(i, set) { lbSet = set || galImgs; lb.hidden = false; requestAnimationFrame(function () { lb.classList.add('is-open'); }); lbShow(i); lockScroll(true); }
+  function closeLb() { if (!lb.classList.contains('is-open')) return; lb.classList.remove('is-open'); lbImg.classList.remove('is-in'); if (!doc.classList.contains('modal-open')) lockScroll(false); setTimeout(function () { lb.hidden = true; }, 800); }
   window.closeLb = closeLb;
-  gs.forEach(function (g, i) { g.setAttribute('data-cursor', 'View'); g.addEventListener('click', function () { openLb(i); }); });
+  gs.forEach(function (g, i) { g.setAttribute('data-cursor', 'View'); g.addEventListener('click', function () { openLb(i, galImgs); }); });
   document.getElementById('lbClose').addEventListener('click', closeLb);
   lb.addEventListener('click', function (e) { if (e.target === lb) closeLb(); });
   document.addEventListener('keydown', function (e) {
@@ -561,7 +572,7 @@
   (function () {
     var c = document.getElementById('cursor'); if (!c || !fine || reduce) return;
     var label = c.querySelector('span');
-    document.querySelectorAll('.stay-card').forEach(function (s) { s.setAttribute('data-cursor', 'Explore'); });
+    document.querySelectorAll('.stay-card').forEach(function (s) { s.setAttribute('data-cursor', 'View'); });
     var x = -100, y = -100, cx = -100, cy = -100;
     window.addEventListener('pointermove', function (e) { x = e.clientX; y = e.clientY; }, { passive: true });
     document.addEventListener('pointerover', function (e) {
@@ -573,26 +584,118 @@
     (function loop() { cx += (x - cx) * 0.16; cy += (y - cy) * 0.16; c.style.transform = 'translate3d(' + cx + 'px,' + cy + 'px,0)'; requestAnimationFrame(loop); })();
     // stay cards: clicking anywhere opens the room
     document.querySelectorAll('.stay-card').forEach(function (s) {
-      s.addEventListener('click', function (e) { if (!e.target.closest('a')) { var a = s.querySelector('a.btn'); if (a) location.hash = a.getAttribute('href').slice(1); } });
+      /* card clicks open the room panel (see Room panels) */
     });
   })();
 
-  /* ---------- Enquiry form ---------- */
-  var form = document.getElementById('enquiry');
-  var note = document.getElementById('formNote');
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var d = new FormData(form);
-    if (!d.get('name') || !/.+@.+\..+/.test(d.get('email') || '')) { note.textContent = 'Please add your name and a valid email address.'; return; }
-    var body = [
-      'Name: ' + d.get('name'), 'Email: ' + d.get('email'),
-      'Arrival: ' + (d.get('arrival') || 'not set'), 'Departure: ' + (d.get('departure') || 'not set'),
-      'Guests: ' + (d.get('guests') || 'not set'), 'Interest: ' + (d.get('room') || 'not sure yet'),
-      '', d.get('message') || ''
-    ].join('\n');
-    note.textContent = 'Opening your email app to send this enquiry.';
-    window.location.href = 'mailto:' + CONFIG.ENQUIRY_TO + '?subject=' + encodeURIComponent('Website enquiry from ' + d.get('name')) + '&body=' + encodeURIComponent(body);
+  /* ---------- Modals: room panels and the enquiry form (Flightec-style overlay; you stay where you were) ---------- */
+  var openModal = null, lastFocus = null;
+  function showModal(m) {
+    if (openModal && openModal !== m) hideModal(openModal, true);
+    lastFocus = document.activeElement;
+    m.hidden = false; void m.offsetWidth; m.classList.add('is-open');
+    var sc = m.querySelector('.modal-scroll'); if (sc) sc.scrollTop = 0;
+    openModal = m; lockScroll(true); document.documentElement.classList.add('modal-open');
+    var pn = m.querySelector('.modal-panel'); if (pn) { pn.setAttribute('tabindex', '-1'); setTimeout(function () { pn.focus({ preventScroll: true }); }, 60); }
+  }
+  function hideModal(m, swap) {
+    if (!m || !m.classList.contains('is-open')) return;
+    m.classList.remove('is-open');
+    setTimeout(function () { if (!m.classList.contains('is-open')) m.hidden = true; }, 700);
+    if (!swap) {
+      openModal = null; lockScroll(false); document.documentElement.classList.remove('modal-open');
+      if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    }
+  }
+  document.querySelectorAll('.modal').forEach(function (m) {
+    m.addEventListener('click', function (e) { if (e.target === m || e.target.closest('[data-modal-close]')) hideModal(m); });
   });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && openModal && !e.lbClosed) hideModal(openModal); });
+
+  // Room panels
+  function openRoom(id) { var m = document.getElementById('rp-' + id); if (m) showModal(m); }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-room-open]');
+    if (!t || e.target.closest('a')) return;
+    e.preventDefault(); openRoom(t.getAttribute('data-room-open'));
+  });
+  document.querySelectorAll('.stay-card').forEach(function (c) {
+    c.setAttribute('tabindex', '-1');
+  });
+  var OLD = { 'luxury-lodge-rooms': 'family-suite', 'luxury-family-rooms': 'luxury-room', 'luxury-hilltop-chalets': 'hilltop-chalet', 'suites': 'luxury-room', 'hilltop-chalets': 'hilltop-chalet' };
+  function hashRoom() {
+    var h = location.hash; if (h.indexOf('#/') !== 0) return;
+    var id = OLD[h.slice(2)] || h.slice(2);
+    history.replaceState(null, '', location.pathname + location.search + '#stay');
+    scrollToEl(document.getElementById('stay'), true);
+    setTimeout(function () { openRoom(id); }, 300);
+  }
+  window.addEventListener('hashchange', hashRoom);
+  setTimeout(hashRoom, 0);
+  // panel gallery: arrows step one photo
+  document.querySelectorAll('.rp-gallery').forEach(function (g) {
+    var tr = g.querySelector('.rp-track');
+    function step(dir) { var s = tr.querySelector('.rp-slide'); var w = s.getBoundingClientRect().width + 12; tr.scrollBy({ left: dir * w, behavior: 'smooth' }); }
+    g.querySelector('.rp-prev').addEventListener('click', function () { step(-1); });
+    g.querySelector('.rp-next').addEventListener('click', function () { step(1); });
+    var down = null, moved = 0;
+    tr.addEventListener('pointerdown', function (e) { moved = 0; if (e.pointerType !== 'mouse') return; down = { x: e.clientX, l: tr.scrollLeft }; tr.classList.add('dragging'); });
+    window.addEventListener('pointermove', function (e) { if (down) { moved = Math.max(moved, Math.abs(e.clientX - down.x)); tr.scrollLeft = down.l - (e.clientX - down.x); } });
+    window.addEventListener('pointerup', function () { if (down) { down = null; tr.classList.remove('dragging'); } });
+    // tap or click a photo (not a drag) to see it full screen, then page through this room's photos
+    var imgs = Array.prototype.slice.call(tr.querySelectorAll('img'));
+    tr.querySelectorAll('.rp-slide').forEach(function (sl, i) {
+      sl.setAttribute('data-cursor', 'View'); sl.setAttribute('role', 'button'); sl.setAttribute('tabindex', '0');
+      sl.setAttribute('aria-label', 'View photo ' + (i + 1) + ' full screen');
+      sl.addEventListener('click', function () { if (moved > 6) return; openLb(i, imgs); });
+      sl.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLb(i, imgs); } });
+    });
+  });
+
+  // Enquiry modal: one form, set up for the topic it was opened from
+  var enq = document.getElementById('enqModal');
+  var TOPICS = {
+    general: { t: 'Send an Enquiry', i: 'Our reservations team will get back to you.', to: 'reservations', topic: 'General enquiry' },
+    room: { t: 'Enquire About This Room', i: 'Ask us anything about the room or your stay. Our reservations team will get back to you.', to: 'reservations', topic: 'Room enquiry' },
+    transfer: { t: 'Arrange a Transfer', i: 'Tell us where you are coming from and when, and our reservations team will arrange your transfer.', to: 'reservations', topic: 'Transfer request' },
+    flyin: { t: 'Enquire About Fly-In Arrivals', i: 'Arriving by air? Okutala has its own airfield. Please contact us in advance to arrange your arrival.', to: 'flyin', topic: 'Fly-in arrival' }
+  };
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-enquire]'); if (!t || !enq) return;
+    e.preventDefault();
+    var k = t.getAttribute('data-enquire'), c = TOPICS[k] || TOPICS.general, f = enq.querySelector('form');
+    enq.querySelector('#enqTitle').textContent = c.t; enq.querySelector('#enqIntro').textContent = c.i;
+    f.setAttribute('data-to', c.to); f.elements.topic.value = c.topic;
+    var fly = k === 'flyin';
+    f.querySelector('.ff-flyin').hidden = !fly; f.querySelector('.ff-dates').hidden = fly; f.querySelector('.ff-room').hidden = fly;
+    f.elements.room.value = t.getAttribute('data-room') || (k === 'transfer' ? 'Transfers' : '');
+    f.querySelector('.form-note').textContent = ''; f.classList.remove('is-sent');
+    showModal(enq);
+  });
+
+  // Forms: validate, then send through the form service (staging: confirm only)
+  function wireForm(form) {
+    if (!form) return;
+    var note = form.querySelector('.form-note');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var d = new FormData(form);
+      if (!d.get('name') || !/.+@.+\..+/.test(d.get('email') || '')) { note.textContent = 'Please add your name and a valid email address.'; return; }
+      var to = form.getAttribute('data-to') === 'flyin' ? CONFIG.TO_FLYIN : CONFIG.TO_RESERVATIONS;
+      var topic = d.get('topic') || 'Website enquiry';
+      var payload = { _subject: topic + ' from ' + d.get('name'), _template: 'table', _captcha: 'false' };
+      d.forEach(function (v, k) { if (v && k !== 'topic') payload[k] = v; });
+      var btn = form.querySelector('button[type=submit]');
+      function done() { form.reset(); form.classList.add('is-sent'); note.textContent = 'Thank you. Your enquiry has been sent and our team will be in touch shortly.' + (CONFIG.FORMS_LIVE ? '' : ' (Staging preview: forms are not connected yet, so nothing was sent.)'); btn.disabled = false; }
+      btn.disabled = true; note.textContent = 'Sending…';
+      if (!CONFIG.FORMS_LIVE) { setTimeout(done, 600); return; }
+      fetch(CONFIG.FORM_SERVICE + encodeURIComponent(to), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload) })
+        .then(function (r) { if (!r.ok) throw 0; done(); })
+        .catch(function () { btn.disabled = false; note.textContent = 'Sorry, something went wrong. Please call us on +264 81 333 3448.'; });
+    });
+  }
+  var mainForm = document.getElementById('enquiry'); if (mainForm) { mainForm.setAttribute('data-to', 'reservations'); var fn = mainForm.querySelector('#formNote'); if (fn) fn.classList.add('form-note'); }
+  wireForm(mainForm); wireForm(document.getElementById('enqForm'));
 
   /* ---------- Start: route, then the intro curtain lifts on the hero ---------- */
   var hero = document.querySelector('.hero');
@@ -600,9 +703,8 @@
   function startPage() {
     observeAll(document); observeRise(document);
   }
-  var firstIsPage = location.hash.indexOf('#/') === 0;
-  if (firstIsPage) { var hh = location.hash; home.hidden = true; route(); }
-  else if (location.hash.length > 1) { setTimeout(function () { var t = document.getElementById(location.hash.slice(1)); if (t) scrollToEl(t, true); }, 50); }
+  var firstIsPage = false;
+  if (location.hash.length > 1 && location.hash.indexOf('#/') !== 0) { setTimeout(function () { var t = document.getElementById(location.hash.slice(1)); if (t) scrollToEl(t, true); }, 50); }
 
   var seen = false; try { seen = sessionStorage.getItem('okt-intro') === '1'; } catch (e) {}
   if (reduce || !curtain || seen || firstIsPage) {
