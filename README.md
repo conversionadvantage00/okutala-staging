@@ -20,7 +20,6 @@ Open `index.html` in a browser, or serve the folder: `python3 -m http.server` an
 ## Staging notes
 
 - The site is set to `noindex` (meta tag + robots.txt). Remove both before launch.
-- The "Heading font" switch (bottom right) is for client review only. Remove the `#typeToggle` element before launch.
 - Forms: every enquiry opens a form (no email-app links). Accommodation, transfers and general enquiries go to reservations@okutalalodge.com; fly-in arrivals go to foh@okutala.com (`CONFIG` in `assets/js/main.js`).
 - Forms are NOT connected on staging (`CONFIG.FORMS_LIVE = false`): they show a thank-you note and send nothing. To go live, set `FORMS_LIVE: true` (uses FormSubmit; each inbox gets a one-time activation email) or point `FORM_SERVICE` at another form service.
 - Booking links go to Nightsbridge (`CONFIG.NIGHTSBRIDGE_URL`).

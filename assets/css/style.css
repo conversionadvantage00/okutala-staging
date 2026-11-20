@@ -1153,3 +1153,12 @@ html[data-type="aptos"] .ru-n { font-style: normal; font-weight: 700; }
 .rp-slide:focus-visible { outline: 1px solid var(--terracotta); outline-offset: 3px; }
 .lb-nav { display: grid; place-items: center; line-height: 0; } .lb-nav svg { display: block; }
 
+/* mobile menu: same header state while the menu animates closed, and links never squeeze */
+@media (max-width: 1100px) {
+  .menu-closing .site-header { color: var(--sandstone); background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; transform: none !important; height: var(--header); }
+  .menu-closing .site-header::before { opacity: 0; }
+  .menu-closing .brand { position: relative; z-index: 60; width: 124px; }
+  .nav a, .nav-book { flex-shrink: 0; }
+  .nav a:not(.btn) { transition: opacity .45s ease, transform .8s var(--ease); }
+}
+

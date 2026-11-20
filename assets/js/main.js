@@ -24,28 +24,7 @@
   doc.classList.add('js');
   function clamp(v, a, b) { a = a || 0; b = b === undefined ? 1 : b; return v < a ? a : v > b ? b : v; }
 
-  /* ---------- Review-only: headings serif or Aptos (always opens on serif) ---------- */
   var typeHint = function () {};
-  (function () {
-    var t = document.getElementById('typeToggle'); if (!t) return;
-    var hint = document.getElementById('ttHint'), hintTimer = null;
-    function set(v) {
-      if (v === 'aptos') doc.setAttribute('data-type', 'aptos'); else doc.removeAttribute('data-type');
-      t.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === v ? 'true' : 'false'); });
-      if (lenis) lenis.resize();
-    }
-    function dismiss() { t.classList.remove('is-hinting'); clearTimeout(hintTimer); }
-    set('serif');
-    t.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { set(b.getAttribute('data-v')); dismiss(); } });
-    // once per visit: a gentle nudge so the client notices the choice
-    typeHint = function () {
-      var shown = false; try { shown = sessionStorage.getItem('okt-type-hint') === '1'; } catch (e) {}
-      if (shown) return;
-      try { sessionStorage.setItem('okt-type-hint', '1'); } catch (e) {}
-      setTimeout(function () { t.classList.add('is-hinting'); hintTimer = setTimeout(dismiss, 9000); }, 1400);
-    };
-    hint.addEventListener('click', dismiss);
-  })();
 
   /* ---------- Smooth scroll ---------- */
   var lenis = null;
@@ -137,6 +116,13 @@
   var nav = document.getElementById('nav');
   function setMenu(open) {
     menuOpen = open;
+    // keep the header in its menu state until the menu has finished closing: the header's frosted glass
+    // would otherwise become the menu's frame mid-animation and squeeze it into the header strip
+    clearTimeout(setMenu.t);
+    if (!open && document.body.classList.contains('menu-open')) {
+      document.body.classList.add('menu-closing');
+      setMenu.t = setTimeout(function () { document.body.classList.remove('menu-closing'); onScroll(); }, 1050);
+    } else if (open) document.body.classList.remove('menu-closing');
     document.body.classList.toggle('menu-open', open);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
