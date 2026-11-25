@@ -143,6 +143,17 @@
   }
 
   /* ---------- Hero: slow cross-fade with drift ---------- */
+  // hero video: still poster for reduced motion; pause when off screen or the tab is hidden
+  var hv = document.querySelector('.hero-video');
+  if (hv) {
+    if (reduce) { hv.removeAttribute('autoplay'); hv.pause(); }
+    else {
+      var p = hv.play(); if (p && p.catch) p.catch(function () {});
+      if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting && !document.hidden) { var q = hv.play(); if (q && q.catch) q.catch(function () {}); } else hv.pause(); });
+      }).observe(hv);
+    }
+  }
   var slides = document.querySelectorAll('.hero .slide');
   if (slides.length > 1 && !reduce) {
     var si = 0;
